@@ -25,6 +25,43 @@ def health():
     return jsonify({'status': 'ok'})
 
 
+@app.route('/api/debug/snowflake', methods=['GET'])
+def debug_snowflake():
+    """Debug endpoint to test Snowflake connection."""
+    import os
+    from snowflake_service import get_connection
+
+    # Check which env vars are set (not their values)
+    env_status = {
+        'SNOWFLAKE_ACCOUNT': bool(os.environ.get('SNOWFLAKE_ACCOUNT')),
+        'SNOWFLAKE_USER': bool(os.environ.get('SNOWFLAKE_USER')),
+        'SNOWFLAKE_PAT': bool(os.environ.get('SNOWFLAKE_PAT')),
+        'SNOWFLAKE_WAREHOUSE': bool(os.environ.get('SNOWFLAKE_WAREHOUSE')),
+        'SNOWFLAKE_DATABASE': os.environ.get('SNOWFLAKE_DATABASE', 'SAL_DEV_SANDBOX (default)'),
+        'SNOWFLAKE_SCHEMA': os.environ.get('SNOWFLAKE_SCHEMA', 'CHROME_EXTENSION_FEEDBACK (default)'),
+    }
+
+    # Try to connect and run a simple query
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT CURRENT_DATABASE(), CURRENT_SCHEMA(), COUNT(*) FROM ANALYSIS_TYPES")
+            row = cursor.fetchone()
+            return jsonify({
+                'env_vars': env_status,
+                'connection': 'success',
+                'current_database': row[0],
+                'current_schema': row[1],
+                'analysis_types_count': row[2]
+            })
+    except Exception as e:
+        return jsonify({
+            'env_vars': env_status,
+            'connection': 'failed',
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/analysis-types', methods=['GET'])
 def list_analysis_types():
     """Get all active analysis types from Snowflake."""

@@ -33,8 +33,7 @@ let lookupResults = []; // Results from analysis lookup
 // Backend URL for Snowflake operations
 const BACKEND_URL = 'https://hubspot-deal-analysis-extension-production.up.railway.app';
 
-// API keys - loaded from Chrome storage (set via extension options page)
-// These placeholders are used when keys aren't configured
+// API keys - configure via extension options page
 const HARDCODED_SETTINGS = {
   hubspotToken: "",
   claudeApiKey: ""
