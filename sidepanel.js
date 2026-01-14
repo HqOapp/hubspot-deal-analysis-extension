@@ -164,6 +164,11 @@ function setupEventListeners() {
     if (e.target.id === 'lookupModal') closeLookupModal();
   });
   document.getElementById('lookupSearch').addEventListener('input', debounce(searchAnalyses, 300));
+
+  // Filter controls for lookup modal
+  document.getElementById('lookupModelFilter').addEventListener('change', searchAnalyses);
+  document.getElementById('lookupDateFrom').addEventListener('change', searchAnalyses);
+  document.getElementById('lookupDateTo').addEventListener('change', searchAnalyses);
 }
 
 // Debounce helper
@@ -194,11 +199,31 @@ async function tryAutoDetectUrl() {
 }
 
 // Lookup Modal Functions
+let groupedDeals = []; // Store grouped deals for lookup
+
 function openLookupModal() {
   document.getElementById('lookupModal').classList.add('active');
   document.getElementById('lookupSearch').value = '';
+  document.getElementById('lookupModelFilter').value = '';
+  document.getElementById('lookupDateFrom').value = '';
+  document.getElementById('lookupDateTo').value = '';
+
+  // Populate model filter dropdown with available analysis types
+  populateModelFilter();
+
   // Load recent analyses immediately
   searchAnalyses();
+}
+
+function populateModelFilter() {
+  const select = document.getElementById('lookupModelFilter');
+  select.innerHTML = '<option value="">All Models</option>';
+  analysisTypes.forEach(type => {
+    const option = document.createElement('option');
+    option.value = type.type_id;
+    option.textContent = type.name;
+    select.appendChild(option);
+  });
 }
 
 function closeLookupModal() {
@@ -207,12 +232,21 @@ function closeLookupModal() {
 
 async function searchAnalyses() {
   const query = document.getElementById('lookupSearch').value.trim();
+  const modelFilter = document.getElementById('lookupModelFilter').value;
+  const dateFrom = document.getElementById('lookupDateFrom').value;
+  const dateTo = document.getElementById('lookupDateTo').value;
   const resultsContainer = document.getElementById('lookupResults');
 
   try {
-    const url = query
-      ? `${BACKEND_URL}/api/analyses/search?q=${encodeURIComponent(query)}`
-      : `${BACKEND_URL}/api/analyses/search`;
+    // Build URL with all filter params
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (modelFilter) params.append('model', modelFilter);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    params.append('grouped', 'true');
+
+    const url = `${BACKEND_URL}/api/analyses/search?${params.toString()}`;
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -220,21 +254,200 @@ async function searchAnalyses() {
       return;
     }
 
-    lookupResults = await response.json();
+    const data = await response.json();
 
-    if (lookupResults.length === 0) {
-      resultsContainer.innerHTML = query
-        ? '<p class="lookup-empty">No analyses found matching your search</p>'
-        : '<p class="lookup-empty">No analyses found</p>';
-      return;
+    if (data.grouped && data.deals) {
+      groupedDeals = data.deals;
+      if (groupedDeals.length === 0) {
+        resultsContainer.innerHTML = query || modelFilter || dateFrom || dateTo
+          ? '<p class="lookup-empty">No analyses found matching your filters</p>'
+          : '<p class="lookup-empty">No analyses found</p>';
+        return;
+      }
+      renderGroupedLookupResults();
+    } else {
+      // Fallback for non-grouped response
+      lookupResults = data.analyses || [];
+      if (lookupResults.length === 0) {
+        resultsContainer.innerHTML = '<p class="lookup-empty">No analyses found</p>';
+        return;
+      }
+      renderLookupResults();
     }
-
-    renderLookupResults();
 
   } catch (error) {
     console.error('Error searching analyses:', error);
     resultsContainer.innerHTML = '<p class="lookup-empty">Error connecting to server</p>';
   }
+}
+
+function renderGroupedLookupResults() {
+  const resultsContainer = document.getElementById('lookupResults');
+
+  const html = groupedDeals.map((deal, dealIndex) => {
+    const analysisCount = deal.analyses.length;
+    const latestAnalysis = deal.analyses[0]; // Already sorted newest first
+    const latestDate = new Date(latestAnalysis.created_at);
+    const formattedDate = latestDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    // If only one analysis, render as simple item
+    if (analysisCount === 1) {
+      const analysis = deal.analyses[0];
+      const date = new Date(analysis.created_at);
+      const fullDate = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+      return `
+        <div class="lookup-item" data-deal-index="${dealIndex}" data-analysis-index="0">
+          <div class="lookup-item-info">
+            <div class="lookup-item-name">${analysis.deal_name || 'Unknown Deal'}</div>
+            <div class="lookup-item-meta">Deal ${analysis.deal_id} • ${fullDate}</div>
+          </div>
+          <span class="lookup-item-type">${analysis.type_name}</span>
+        </div>
+      `;
+    }
+
+    // Multiple analyses - render as expandable group
+    const analysisItems = deal.analyses.map((analysis, analysisIndex) => {
+      const date = new Date(analysis.created_at);
+      const fullDate = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+      return `
+        <div class="lookup-subitem" data-deal-index="${dealIndex}" data-analysis-index="${analysisIndex}">
+          <div class="lookup-subitem-info">
+            <span class="lookup-subitem-type">${analysis.type_name}</span>
+            <span class="lookup-subitem-date">${fullDate}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="lookup-group" data-deal-index="${dealIndex}">
+        <div class="lookup-group-header">
+          <div class="lookup-group-info">
+            <div class="lookup-group-name">${deal.deal_name || 'Unknown Deal'}</div>
+            <div class="lookup-group-meta">Deal ${deal.deal_id} • ${formattedDate}</div>
+          </div>
+          <div class="lookup-group-right">
+            <span class="lookup-group-count">${analysisCount} analyses</span>
+            <span class="lookup-group-chevron">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </div>
+        </div>
+        <div class="lookup-group-items">
+          ${analysisItems}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  resultsContainer.innerHTML = html;
+
+  // Add click handlers for group headers (expand/collapse)
+  resultsContainer.querySelectorAll('.lookup-group-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      const group = header.closest('.lookup-group');
+      group.classList.toggle('expanded');
+    });
+  });
+
+  // Add click handlers for individual analysis items
+  resultsContainer.querySelectorAll('.lookup-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const dealIndex = parseInt(item.dataset.dealIndex);
+      const analysisIndex = parseInt(item.dataset.analysisIndex);
+      viewGroupedAnalysis(dealIndex, analysisIndex);
+    });
+  });
+
+  // Add click handlers for sub-items within groups
+  resultsContainer.querySelectorAll('.lookup-subitem').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent group header toggle
+      const dealIndex = parseInt(item.dataset.dealIndex);
+      const analysisIndex = parseInt(item.dataset.analysisIndex);
+      viewGroupedAnalysis(dealIndex, analysisIndex);
+    });
+  });
+}
+
+function viewGroupedAnalysis(dealIndex, analysisIndex) {
+  const deal = groupedDeals[dealIndex];
+  if (!deal) return;
+  const analysis = deal.analyses[analysisIndex];
+  if (!analysis) return;
+
+  // Use the existing viewLookupAnalysis logic but with the analysis directly
+  closeLookupModal();
+
+  const date = new Date(analysis.created_at);
+  const timestamp = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+
+  currentResult = {
+    dealId: analysis.deal_id,
+    dealName: analysis.deal_name,
+    analysisType: analysis.analysis_type,
+    analysisTypeName: analysis.type_name,
+    analysis: analysis.full_response,
+    timestamp: timestamp,
+    analysisId: analysis.analysis_id
+  };
+
+  resultTitle.textContent = `${analysis.type_name}: ${analysis.deal_name}`;
+  resultMeta.textContent = `Deal ID: ${analysis.deal_id} | Generated: ${timestamp}`;
+
+  parsedSections = parseAnalysisSections(analysis.full_response);
+  renderAnalysisWithFeedback(parsedSections);
+
+  // Mark as historical (disable feedback)
+  overallFeedbackSubmitted = true;
+  const overallTrigger = document.getElementById('overallFeedbackTrigger');
+  overallTrigger.classList.add('submitted');
+  overallTrigger.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 8v4l3 3"></path>
+      <circle cx="12" cy="12" r="10"></circle>
+    </svg>
+    Historical
+  `;
+
+  sectionFeedbackState = {};
+  document.querySelectorAll('.section-feedback-trigger').forEach(btn => {
+    btn.classList.add('submitted');
+    btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 8v4l3 3"></path>
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      Historical
+    `;
+  });
+
+  showResults();
 }
 
 function renderLookupResults() {

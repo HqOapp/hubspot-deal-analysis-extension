@@ -101,53 +101,67 @@ def submit_feedback():
 
 @app.route('/api/analyses/search', methods=['GET'])
 def search_analyses():
-    """Search analyses by deal name or ID."""
+    """
+    Search analyses by deal name or ID with optional filters.
+
+    Query params:
+        q: search query (deal name or ID)
+        model: filter by analysis_type
+        date_from: filter by date (YYYY-MM-DD)
+        date_to: filter by date (YYYY-MM-DD)
+        grouped: if 'true', group by deal_id and return newest first within each deal
+    """
     from snowflake_service import get_connection
 
     query = request.args.get('q', '').strip()
+    model_filter = request.args.get('model', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+    grouped = request.args.get('grouped', 'true').lower() == 'true'
 
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
 
-            if query:
-                # Search by deal name or ID
-                sql = """
-                    SELECT
-                        a.analysis_id,
-                        a.deal_id,
-                        a.deal_name,
-                        a.analysis_type,
-                        at.name as type_name,
-                        a.full_response,
-                        a.created_at
-                    FROM ANALYSES a
-                    LEFT JOIN ANALYSIS_TYPES at ON a.analysis_type = at.type_id
-                    WHERE LOWER(a.deal_name) LIKE LOWER(%s)
-                       OR a.deal_id LIKE %s
-                    ORDER BY a.created_at DESC
-                    LIMIT 50
-                """
-                search_pattern = f'%{query}%'
-                cursor.execute(sql, (search_pattern, search_pattern))
-            else:
-                # Return recent analyses
-                sql = """
-                    SELECT
-                        a.analysis_id,
-                        a.deal_id,
-                        a.deal_name,
-                        a.analysis_type,
-                        at.name as type_name,
-                        a.full_response,
-                        a.created_at
-                    FROM ANALYSES a
-                    LEFT JOIN ANALYSIS_TYPES at ON a.analysis_type = at.type_id
-                    ORDER BY a.created_at DESC
-                    LIMIT 20
-                """
-                cursor.execute(sql)
+            # Build dynamic WHERE clause
+            conditions = []
+            params = []
 
+            if query:
+                conditions.append("(LOWER(a.deal_name) LIKE LOWER(%s) OR a.deal_id LIKE %s)")
+                search_pattern = f'%{query}%'
+                params.extend([search_pattern, search_pattern])
+
+            if model_filter:
+                conditions.append("a.analysis_type = %s")
+                params.append(model_filter)
+
+            if date_from:
+                conditions.append("DATE(a.created_at) >= %s")
+                params.append(date_from)
+
+            if date_to:
+                conditions.append("DATE(a.created_at) <= %s")
+                params.append(date_to)
+
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            sql = f"""
+                SELECT
+                    a.analysis_id,
+                    a.deal_id,
+                    a.deal_name,
+                    a.analysis_type,
+                    at.name as type_name,
+                    a.full_response,
+                    a.created_at
+                FROM ANALYSES a
+                LEFT JOIN ANALYSIS_TYPES at ON a.analysis_type = at.type_id
+                WHERE {where_clause}
+                ORDER BY a.created_at DESC
+                LIMIT 100
+            """
+            cursor.execute(sql, params)
             rows = cursor.fetchall()
 
             analyses = []
@@ -162,11 +176,34 @@ def search_analyses():
                     'created_at': row[6].isoformat() if row[6] else None
                 })
 
-            return jsonify(analyses)
+            if grouped:
+                # Group analyses by deal_id, sorted by newest first within each deal
+                grouped_deals = {}
+                for analysis in analyses:
+                    deal_id = analysis['deal_id']
+                    if deal_id not in grouped_deals:
+                        grouped_deals[deal_id] = {
+                            'deal_id': deal_id,
+                            'deal_name': analysis['deal_name'],
+                            'analyses': [],
+                            'latest_created_at': analysis['created_at']
+                        }
+                    grouped_deals[deal_id]['analyses'].append(analysis)
+
+                # Sort deals by their most recent analysis
+                sorted_deals = sorted(
+                    grouped_deals.values(),
+                    key=lambda d: d['latest_created_at'] or '',
+                    reverse=True
+                )
+
+                return jsonify({'grouped': True, 'deals': sorted_deals})
+
+            return jsonify({'grouped': False, 'analyses': analyses})
 
     except Exception as e:
         print(f"Error searching analyses: {e}")
-        return jsonify([])
+        return jsonify({'grouped': False, 'analyses': []})
 
 
 @app.route('/api/feedback-stats', methods=['GET'])

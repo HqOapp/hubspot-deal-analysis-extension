@@ -132,8 +132,26 @@
         <button class="modal-close" id="lookupModalClose">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="lookup-search">
-          <input type="text" id="lookupSearch" placeholder="Search by deal name or ID...">
+        <div class="lookup-filters">
+          <div class="lookup-search">
+            <input type="text" id="lookupSearch" placeholder="Search by deal name or ID...">
+          </div>
+          <div class="lookup-filter-row">
+            <div class="lookup-filter-group">
+              <label for="lookupModelFilter">Model</label>
+              <select id="lookupModelFilter">
+                <option value="">All Models</option>
+              </select>
+            </div>
+            <div class="lookup-filter-group">
+              <label for="lookupDateFrom">From</label>
+              <input type="date" id="lookupDateFrom">
+            </div>
+            <div class="lookup-filter-group">
+              <label for="lookupDateTo">To</label>
+              <input type="date" id="lookupDateTo">
+            </div>
+          </div>
         </div>
         <div class="lookup-results" id="lookupResults">
           <p class="lookup-empty">Enter a search term or browse recent analyses</p>
