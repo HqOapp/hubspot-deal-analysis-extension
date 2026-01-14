@@ -169,6 +169,22 @@ function setupEventListeners() {
   document.getElementById('lookupModelFilter').addEventListener('change', searchAnalyses);
   document.getElementById('lookupDateFrom').addEventListener('change', searchAnalyses);
   document.getElementById('lookupDateTo').addEventListener('change', searchAnalyses);
+
+  // Help button and modal
+  document.getElementById('helpBtn').addEventListener('click', openHelpModal);
+  document.getElementById('helpModalClose').addEventListener('click', closeHelpModal);
+  document.getElementById('helpModal').addEventListener('click', (e) => {
+    if (e.target.id === 'helpModal') closeHelpModal();
+  });
+}
+
+// Help Modal Functions
+function openHelpModal() {
+  document.getElementById('helpModal').classList.add('active');
+}
+
+function closeHelpModal() {
+  document.getElementById('helpModal').classList.remove('active');
 }
 
 // Debounce helper

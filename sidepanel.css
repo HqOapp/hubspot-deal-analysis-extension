@@ -1036,3 +1036,81 @@ select:focus {
   color: #666;
   white-space: nowrap;
 }
+
+/* Help Button */
+.help-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: all 0.2s;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.help-btn:hover {
+  background: #fd4539;
+  border-color: #fd4539;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* Help Modal Content */
+.help-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.help-section {
+  margin-bottom: 20px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eee;
+}
+
+.help-section p {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.help-section ol,
+.help-section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.help-section li {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+.help-section li:last-child {
+  margin-bottom: 0;
+}
+
+.help-section strong {
+  color: #333;
+}

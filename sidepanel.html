@@ -160,6 +160,64 @@
     </div>
   </div>
 
+  <!-- Help Button -->
+  <button class="help-btn" id="helpBtn" title="How to use">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  </button>
+
+  <!-- Help Modal -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>How to Use</h3>
+        <button class="modal-close" id="helpModalClose">&times;</button>
+      </div>
+      <div class="modal-body help-content">
+        <div class="help-section">
+          <h4>Getting Started</h4>
+          <p>This extension analyzes HubSpot deals using AI to provide insights and recommendations.</p>
+        </div>
+
+        <div class="help-section">
+          <h4>Analyzing a Deal</h4>
+          <ol>
+            <li><strong>Enter a Deal URL</strong> - Paste a HubSpot deal URL, or click "Detect from current tab" if you're already viewing a deal in HubSpot.</li>
+            <li><strong>Select Analysis Type</strong> - Choose the type of analysis you want (e.g., Deal Summary, Risk Assessment, etc.).</li>
+            <li><strong>Click "Analyze Deal"</strong> - The AI will fetch deal data and generate insights.</li>
+          </ol>
+        </div>
+
+        <div class="help-section">
+          <h4>After Analysis</h4>
+          <ul>
+            <li><strong>Copy to Clipboard</strong> - Copy the full analysis to paste elsewhere.</li>
+            <li><strong>Rate Analysis</strong> - Provide feedback on whether the analysis was helpful. Your feedback helps improve the models.</li>
+            <li><strong>Section Feedback</strong> - Each section has a feedback button to rate individual parts.</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>Browse Previous Analyses</h4>
+          <p>Click "Browse Previous Analyses" to search and view past analyses. You can filter by:</p>
+          <ul>
+            <li><strong>Search</strong> - Find deals by name or ID</li>
+            <li><strong>Model</strong> - Filter by analysis type</li>
+            <li><strong>Date Range</strong> - Filter by when the analysis was created</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>Model Accuracy</h4>
+          <p>The accuracy percentages shown on the main screen are calculated from user feedback. Higher accuracy means users found those analyses more helpful.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="lib/marked.min.js"></script>
   <script src="hubspot-client.js"></script>
   <script src="analysis-types.js"></script>
