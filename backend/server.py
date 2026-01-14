@@ -1,5 +1,6 @@
 """
-Minimal backend server for Chrome extension to interact with Snowflake.
+Backend server for Chrome extension.
+Handles Snowflake storage, HubSpot data fetching, and Claude analysis.
 
 Run with: python backend/server.py
 """
@@ -14,6 +15,8 @@ from snowflake_service import (
     generate_analysis_id,
     parse_sections
 )
+from hubspot_service import fetch_deal_data
+from claude_service import analyze_with_claude
 
 app = Flask(__name__)
 CORS(app)  # Allow extension to make requests
@@ -337,6 +340,80 @@ def get_feedback_stats():
     except Exception as e:
         print(f"Error fetching feedback stats: {e}")
         return jsonify([])
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_deal():
+    """
+    Fetch deal data from HubSpot and run Claude analysis.
+
+    This endpoint handles everything server-side so users don't need API keys.
+
+    Request body:
+        deal_id: HubSpot deal ID
+        analysis_type: Type of analysis to run (must exist in ANALYSIS_TYPES)
+
+    Returns:
+        analysis_id: ID of saved analysis
+        deal_name: Name of the deal
+        analysis: Full analysis text
+        sections: Parsed sections for feedback
+    """
+    data = request.json
+
+    deal_id = data.get('deal_id')
+    analysis_type_id = data.get('analysis_type')
+
+    if not deal_id:
+        return jsonify({'error': 'Missing deal_id'}), 400
+    if not analysis_type_id:
+        return jsonify({'error': 'Missing analysis_type'}), 400
+
+    # Get analysis type config from Snowflake
+    analysis_type_config = get_analysis_type(analysis_type_id)
+    if not analysis_type_config:
+        return jsonify({'error': f'Analysis type not found: {analysis_type_id}'}), 404
+
+    try:
+        # Fetch deal data from HubSpot
+        deal_data = fetch_deal_data(deal_id)
+        deal_name = deal_data['deal_name']
+        formatted_content = deal_data['formatted_content']
+
+        # Run Claude analysis
+        analysis_result = analyze_with_claude(
+            deal_content=formatted_content,
+            system_prompt=analysis_type_config['system_prompt']
+        )
+
+        # Generate analysis ID and save to Snowflake
+        analysis_id = generate_analysis_id(deal_id, analysis_type_id)
+
+        save_analysis(
+            analysis_id=analysis_id,
+            deal_id=deal_id,
+            deal_name=deal_name,
+            analysis_type=analysis_type_id,
+            user_input=formatted_content,
+            system_prompt=analysis_type_config['system_prompt'],
+            full_response=analysis_result,
+            prompt_version=analysis_type_config.get('version', 1),
+            metadata={'source': 'chrome_extension_backend'}
+        )
+
+        return jsonify({
+            'analysis_id': analysis_id,
+            'deal_id': deal_id,
+            'deal_name': deal_name,
+            'analysis_type': analysis_type_id,
+            'analysis_type_name': analysis_type_config['name'],
+            'analysis': analysis_result,
+            'sections': parse_sections(analysis_result)
+        })
+
+    except Exception as e:
+        print(f"Error analyzing deal: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

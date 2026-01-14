@@ -30,14 +30,8 @@ let currentModalSection = null; // Track which section the modal is for (null = 
 let overallFeedbackSubmitted = false; // Track if overall feedback has been submitted
 let lookupResults = []; // Results from analysis lookup
 
-// Backend URL for Snowflake operations
+// Backend URL - handles HubSpot, Claude, and Snowflake operations
 const BACKEND_URL = 'https://hubspot-deal-analysis-extension-production.up.railway.app';
-
-// API keys - configure via extension options page
-const HARDCODED_SETTINGS = {
-  hubspotToken: "",
-  claudeApiKey: ""
-};
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -123,7 +117,7 @@ function renderFeedbackStats(stats) {
 }
 
 async function checkSettings() {
-  // Use hardcoded settings - always valid
+  // No client-side settings needed - backend handles API keys
   settingsWarning.classList.remove('active');
   if (analysisTypes.length > 0) {
     analyzeBtn.disabled = false;
@@ -638,70 +632,46 @@ async function runAnalysis() {
     return;
   }
 
-  // Use hardcoded API keys
-  const settings = HARDCODED_SETTINGS;
-
   showLoading();
 
   try {
-    // Fetch deal data
-    setLoadingStatus('Fetching deal from HubSpot...');
-    const client = new HubSpotClient(settings.hubspotToken, dealId);
+    // Call backend to fetch HubSpot data and run Claude analysis
+    setLoadingStatus('Analyzing deal (this may take a moment)...');
 
-    const deal = await client.getDeal();
-    if (!deal) {
-      throw new Error('Could not fetch deal. Please check the URL and your access permissions.');
+    const response = await fetch(`${BACKEND_URL}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deal_id: dealId,
+        analysis_type: analysisType
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
-    const dealName = deal.properties?.dealname || 'Unknown Deal';
-
-    // Fetch associated data
-    setLoadingStatus('Fetching contacts and companies...');
-    const [contacts, companies] = await Promise.all([
-      client.getContacts(),
-      client.getCompanies()
-    ]);
-
-    setLoadingStatus('Fetching deal activities...');
-    const engagements = await client.getAllEngagements();
-    const collectedUrls = collectAllUrls(engagements);
-
-    // Format for Claude
-    setLoadingStatus('Preparing data for analysis...');
-    const dealContent = formatDealForClaude(deal, contacts, companies, engagements, collectedUrls);
-
-    // Get the selected analysis type from backend data
-    const selectedAnalysisType = analysisTypes.find(t => t.type_id === analysisType);
-    if (!selectedAnalysisType) {
-      throw new Error('Selected analysis type not found');
-    }
-
-    // Run Claude analysis using system prompt from Snowflake
-    setLoadingStatus('Running AI analysis (this may take a moment)...');
-    const analysis = await analyzeWithClaudeCustomPrompt(
-      settings.claudeApiKey,
-      dealContent,
-      selectedAnalysisType.system_prompt
-    );
+    const data = await response.json();
 
     // Store result
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
     currentResult = {
-      dealId,
-      dealName,
-      analysisType,
-      analysisTypeName: selectedAnalysisType.name,
-      analysis,
+      dealId: data.deal_id,
+      dealName: data.deal_name,
+      analysisType: data.analysis_type,
+      analysisTypeName: data.analysis_type_name,
+      analysis: data.analysis,
       timestamp,
-      analysisId: null
+      analysisId: data.analysis_id
     };
 
     // Display results
-    resultTitle.textContent = `${currentResult.analysisTypeName}: ${dealName}`;
+    resultTitle.textContent = `${currentResult.analysisTypeName}: ${data.deal_name}`;
     resultMeta.textContent = `Deal ID: ${dealId} | Generated: ${timestamp}`;
 
     // Parse sections and render with feedback buttons
-    parsedSections = parseAnalysisSections(analysis);
+    parsedSections = parseAnalysisSections(data.analysis);
     renderAnalysisWithFeedback(parsedSections);
 
     // Reset overall feedback UI
@@ -716,14 +686,6 @@ async function runAnalysis() {
     `;
 
     showResults();
-
-    // Save to Snowflake (non-blocking)
-    saveAnalysisToBackend(currentResult, dealContent, selectedAnalysisType.system_prompt).then(analysisId => {
-      if (analysisId) {
-        currentResult.analysisId = analysisId;
-        console.log('Analysis saved to Snowflake:', analysisId);
-      }
-    });
 
   } catch (error) {
     showForm();
@@ -758,37 +720,7 @@ function resetForm() {
   hideError();
 }
 
-// Snowflake Backend Functions
-
-async function saveAnalysisToBackend(result, userInput, systemPrompt) {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/analyses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deal_id: result.dealId,
-        deal_name: result.dealName,
-        analysis_type: result.analysisType,
-        user_input: userInput,
-        system_prompt: systemPrompt,
-        full_response: result.analysis,
-        prompt_version: 1,
-        metadata: { source: 'chrome_extension' }
-      })
-    });
-
-    if (!response.ok) {
-      console.warn('Failed to save analysis to Snowflake:', await response.text());
-      return null;
-    }
-
-    const data = await response.json();
-    return data.analysis_id;
-  } catch (error) {
-    console.warn('Could not connect to backend for analysis save:', error.message);
-    return null;
-  }
-}
+// Backend Functions
 
 async function submitFeedbackToBackend(analysisId, sectionId, sectionTitle, feedback, reason = null) {
   if (!analysisId) {
