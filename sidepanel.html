@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HubSpot Deal Analyzer</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icons/Header-Logo.svg" alt="HqO" class="header-logo">
+      <h1>HubSpot Deal Analyzer</h1>
+      <p>AI-powered deal insights</p>
+    </div>
+
+    <!-- Settings Warning -->
+    <div class="warning" id="settingsWarning">
+      <p>API keys not configured.</p>
+      <button class="btn btn-small" id="openSettingsBtn">Configure Settings</button>
+    </div>
+
+    <!-- Form Section -->
+    <div class="form-section" id="formSection">
+      <div class="error" id="errorMessage"></div>
+
+      <div class="form-group">
+        <label for="dealUrl">HubSpot Deal URL</label>
+        <input
+          type="text"
+          id="dealUrl"
+          placeholder="Paste HubSpot deal URL or auto-detect..."
+        >
+        <button class="btn-link" id="detectUrlBtn">Detect from current tab</button>
+      </div>
+
+      <div class="form-group">
+        <label for="analysisType">Analysis Type</label>
+        <select id="analysisType">
+          <option value="">Loading...</option>
+        </select>
+        <p class="option-description" id="analysisDescription"></p>
+      </div>
+
+      <button class="btn" id="analyzeBtn">Analyze Deal</button>
+      <button class="btn btn-secondary btn-lookup" id="lookupBtn">Browse Previous Analyses</button>
+
+      <!-- Feedback Stats -->
+      <div class="feedback-stats" id="feedbackStats">
+        <h3 class="stats-title">Model Accuracy</h3>
+        <p class="stats-subtitle">Based on user feedback responses</p>
+        <div class="stats-grid" id="statsGrid">
+          <!-- Stats will be populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Section -->
+    <div class="loading" id="loadingSection">
+      <div class="spinner"></div>
+      <p class="loading-text">Analyzing deal...</p>
+      <p class="loading-subtext" id="loadingStatus">Fetching data from HubSpot...</p>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results" id="resultsSection">
+      <div class="result-header">
+        <h2 class="result-title" id="resultTitle"></h2>
+        <p class="result-meta" id="resultMeta"></p>
+      </div>
+
+      <!-- Overall Feedback -->
+      <div class="overall-feedback" id="overallFeedback">
+        <span class="feedback-label">Was this analysis helpful?</span>
+        <button class="overall-feedback-trigger" id="overallFeedbackTrigger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Rate Analysis
+        </button>
+      </div>
+
+      <div class="analysis-content" id="analysisContent"></div>
+
+      <div class="result-actions">
+        <button class="btn btn-small" id="copyBtn">Copy to Clipboard</button>
+        <button class="btn btn-small btn-secondary" id="newAnalysisBtn">New Analysis</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div class="modal-overlay" id="feedbackModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Section Feedback</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-section-name" id="modalSectionName"></p>
+        <div class="feedback-choice" id="feedbackChoice">
+          <button class="feedback-choice-btn" data-feedback="up" id="modalThumbsUp">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+            </svg>
+            <span>Helpful</span>
+          </button>
+          <button class="feedback-choice-btn" data-feedback="down" id="modalThumbsDown">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+            </svg>
+            <span>Not Helpful</span>
+          </button>
+        </div>
+        <div class="feedback-reason" id="feedbackReasonContainer" style="display: none;">
+          <label for="feedbackReason">What could be improved?</label>
+          <textarea id="feedbackReason" rows="3" placeholder="Please explain what was wrong or could be better..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-small btn-secondary" id="modalCancel">Cancel</button>
+        <button class="btn btn-small" id="modalSubmit" disabled>Submit Feedback</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lookup Modal -->
+  <div class="modal-overlay" id="lookupModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>Browse Previous Analyses</h3>
+        <button class="modal-close" id="lookupModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="lookup-search">
+          <input type="text" id="lookupSearch" placeholder="Search by deal name or ID...">
+        </div>
+        <div class="lookup-results" id="lookupResults">
+          <p class="lookup-empty">Enter a search term or browse recent analyses</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/marked.min.js"></script>
+  <script src="hubspot-client.js"></script>
+  <script src="analysis-types.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

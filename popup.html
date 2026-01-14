@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HubSpot Deal Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icons/Header-Logo.svg" alt="HqO" class="header-logo">
+      <h1>HubSpot Deal Analyzer</h1>
+      <p>AI-powered deal insights</p>
+    </div>
+
+    <!-- Settings Warning -->
+    <div class="warning" id="settingsWarning">
+      <p>API keys not configured.</p>
+      <button class="btn btn-small" id="openSettingsBtn">Configure Settings</button>
+    </div>
+
+    <!-- Form Section -->
+    <div class="form-section" id="formSection">
+      <div class="error" id="errorMessage"></div>
+
+      <div class="form-group">
+        <label for="dealUrl">HubSpot Deal URL</label>
+        <input
+          type="text"
+          id="dealUrl"
+          placeholder="Paste HubSpot deal URL or auto-detect..."
+        >
+        <button class="btn-link" id="detectUrlBtn">Detect from current tab</button>
+      </div>
+
+      <div class="form-group">
+        <label for="analysisType">Analysis Type</label>
+        <select id="analysisType">
+          <option value="gtm">GTM Analysis</option>
+          <option value="pod">Pod Deal Analysis</option>
+          <option value="challenger">Challenger Analysis</option>
+          <option value="winback">Win-Back Analysis</option>
+        </select>
+        <p class="option-description" id="analysisDescription">
+          Closed-won deal analysis for GTM insights
+        </p>
+      </div>
+
+      <button class="btn" id="analyzeBtn">Analyze Deal</button>
+    </div>
+
+    <!-- Loading Section -->
+    <div class="loading" id="loadingSection">
+      <div class="spinner"></div>
+      <p class="loading-text">Analyzing deal...</p>
+      <p class="loading-subtext" id="loadingStatus">Fetching data from HubSpot...</p>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results" id="resultsSection">
+      <div class="result-header">
+        <h2 class="result-title" id="resultTitle"></h2>
+        <p class="result-meta" id="resultMeta"></p>
+      </div>
+
+      <div class="analysis-content" id="analysisContent"></div>
+
+      <div class="result-actions">
+        <button class="btn btn-small" id="copyBtn">Copy to Clipboard</button>
+        <button class="btn btn-small btn-secondary" id="newAnalysisBtn">New Analysis</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/marked.min.js"></script>
+  <script src="hubspot-client.js"></script>
+  <script src="analysis-types.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
