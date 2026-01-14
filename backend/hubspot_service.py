@@ -164,12 +164,20 @@ def strip_html(html_content: str, preserve_urls: bool = True) -> str:
 
 
 def format_timestamp(ts: Optional[str]) -> str:
-    """Format a timestamp."""
+    """Format a timestamp. Handles both milliseconds and ISO format."""
     if not ts:
         return "Unknown date"
     try:
         from datetime import datetime
-        dt = datetime.fromtimestamp(int(ts) / 1000)
+        # Try milliseconds first (older HubSpot format)
+        if ts.isdigit():
+            dt = datetime.fromtimestamp(int(ts) / 1000)
+        # Try ISO format (e.g., "2026-01-12T15:14:37.106Z")
+        elif 'T' in ts:
+            ts_clean = ts.replace('Z', '+00:00')
+            dt = datetime.fromisoformat(ts_clean.replace('+00:00', ''))
+        else:
+            return str(ts)
         return dt.strftime("%Y-%m-%d %H:%M")
     except Exception:
         return str(ts)
