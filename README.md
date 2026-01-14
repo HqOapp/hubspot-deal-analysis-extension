@@ -1,101 +1,137 @@
-# HubSpot Deal Analyzer - Chrome Extension
+# HqO HubSpot Deal Analyzer
 
-A Chrome extension version of the HubSpot Deal Analyzer that provides AI-powered deal insights directly in your browser.
+A Chrome extension that provides AI-powered deal analysis directly in your browser, with feedback tracking and historical analysis storage.
 
-## Installation
+## Architecture
 
-1. **Create Icons** (required):
-   The extension needs PNG icons. Create these files in the `icons/` folder:
-   - `icon16.png` (16x16 pixels)
-   - `icon48.png` (48x48 pixels)
-   - `icon128.png` (128x128 pixels)
-
-   You can use any image editor or online tool to create simple icons, or use a service like:
-   - https://favicon.io/favicon-converter/
-
-2. **Load the Extension**:
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode" (toggle in top right)
-   - Click "Load unpacked"
-   - Select this `chrome_extension` folder
-
-3. **Configure API Keys**:
-   - Click the extension icon in Chrome
-   - Click "Configure Settings" or right-click the extension icon > "Options"
-   - Enter your HubSpot API token and Claude API key
-   - Click "Save Settings"
-
-## Getting API Keys
-
-### HubSpot Private App Token
-1. Go to HubSpot Settings > Integrations > Private Apps
-2. Create a new private app
-3. Add these scopes:
-   - `crm.objects.deals.read`
-   - `crm.objects.contacts.read`
-   - `crm.objects.companies.read`
-   - `sales-email-read` (for email engagements)
-4. Copy the access token
-
-### Claude API Key
-1. Go to https://console.anthropic.com/settings/keys
-2. Create a new API key
-3. Copy the key (starts with `sk-ant-`)
-
-## Usage
-
-1. Navigate to a HubSpot deal page in your browser
-2. Click the extension icon
-3. The deal URL should auto-detect (or paste it manually)
-4. Select analysis type:
-   - **GTM Analysis**: For closed-won deals - extracts buying triggers and outreach angles
-   - **Pod Deal Analysis**: For active deals - identifies risks and reframe opportunities
-5. Click "Analyze Deal"
-6. View results and copy to clipboard
+```
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────┐
+│  Chrome Extension   │────▶│   Flask Backend     │────▶│   Snowflake     │
+│  (Side Panel UI)    │     │   (API Middleware)  │     │   (Database)    │
+└─────────────────────┘     └─────────────────────┘     └─────────────────┘
+         │
+         │ Direct API calls
+         ▼
+┌─────────────────────┐
+│   HubSpot API       │
+│   Claude API        │
+└─────────────────────┘
+```
 
 ## Features
 
-- Auto-detects HubSpot deal URLs from the current tab
-- Two analysis types optimized for different sales workflows
-- Markdown-formatted results
-- Copy analysis to clipboard
-- Secure local storage of API credentials
+- **Side Panel UI** - Opens alongside HubSpot for seamless workflow
+- **Multiple Analysis Types** - GTM, Pod Review, Challenger Sales, Win-back
+- **Auto URL Detection** - Detects deal from current tab
+- **Feedback System** - Rate analyses and individual sections
+- **Historical Lookup** - Browse past analyses with filters
+- **Model Accuracy Tracking** - See which analysis types perform best
 
-## Files
+## Setup
+
+### Prerequisites
+
+- Chrome browser
+- Backend deployed (see `backend/DEPLOYMENT.md`)
+- HubSpot Private App token
+- Claude API key
+
+### Installation
+
+1. **Load the Extension** (Developer Mode):
+   - Go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select this folder (not the `backend/` subfolder)
+
+2. **Configure API Keys**:
+   - Right-click extension icon → Options
+   - Enter HubSpot token and Claude API key
+   - Save
+
+### Getting API Keys
+
+**HubSpot Private App Token:**
+1. HubSpot Settings → Integrations → Private Apps
+2. Create new app with scopes:
+   - `crm.objects.deals.read`
+   - `crm.objects.contacts.read`
+   - `crm.objects.companies.read`
+   - `sales-email-read`
+3. Copy the access token
+
+**Claude API Key:**
+1. Go to https://console.anthropic.com/settings/keys
+2. Create and copy key (starts with `sk-ant-`)
+
+## Usage
+
+1. Navigate to any HubSpot deal page
+2. Click the extension icon to open the side panel
+3. Deal URL auto-detects (or paste manually)
+4. Select analysis type
+5. Click "Analyze Deal"
+6. Provide feedback to improve model accuracy
+
+## Project Structure
 
 ```
-chrome_extension/
-├── manifest.json        # Extension configuration
-├── popup.html          # Main popup UI
-├── popup.css           # Popup styles
-├── popup.js            # Popup logic
-├── options.html        # Settings page
-├── analysis-types.js   # Claude prompt configurations
-├── hubspot-client.js   # HubSpot API client
-├── lib/
-│   └── marked.min.js   # Markdown parser
-└── icons/
-    ├── icon16.png      # (you need to create)
-    ├── icon48.png      # (you need to create)
-    └── icon128.png     # (you need to create)
+├── backend/                 # Flask API server (deploy separately)
+│   ├── server.py           # API endpoints
+│   ├── snowflake_service.py # Database operations
+│   ├── requirements.txt    # Python dependencies
+│   ├── Dockerfile          # Container build
+│   └── DEPLOYMENT.md       # Deployment guide
+│
+├── sidepanel.html          # Main UI
+├── sidepanel.js            # Main logic (BACKEND_URL configured here)
+├── sidepanel.css           # Styles
+├── hubspot-client.js       # HubSpot & Claude API client
+├── analysis-types.js       # Prompt configurations
+├── manifest.json           # Extension manifest
+├── background.js           # Service worker
+├── options.html            # Settings page
+├── popup.js                # Legacy popup (side panel preferred)
+├── popup.html/css          # Legacy popup UI
+├── icons/                  # Extension icons
+└── lib/                    # Third-party (marked.js)
 ```
+
+## Configuration
+
+After backend deployment, update these files:
+
+1. **`sidepanel.js`** - Set `BACKEND_URL` to deployed URL
+2. **`manifest.json`** - Add backend URL to `host_permissions`
+
+See `POST_DEPLOYMENT.md` for detailed instructions.
 
 ## Troubleshooting
 
-**"API keys not configured"**
-- Go to extension options and add your API keys
+| Issue | Solution |
+|-------|----------|
+| "API keys not configured" | Go to Options and add keys |
+| "Error connecting to server" | Check backend URL and deployment |
+| "Could not fetch deal" | Verify HubSpot token has required scopes |
+| Analysis types not loading | Backend may be down, check `/api/health` |
 
-**"Could not fetch deal"**
-- Check that your HubSpot token has the required scopes
-- Verify the deal URL is correct
+## Security
 
-**"Claude API error"**
-- Verify your Claude API key is valid
-- Check you have sufficient API credits
+- API keys stored in Chrome's local storage
+- Keys only sent to official HubSpot/Claude APIs
+- Backend credentials stored as K8s secrets
+- No credentials committed to repo
 
-## Security Note
+## Development
 
-API keys are stored in Chrome's sync storage. They are not transmitted anywhere except to the official HubSpot and Claude APIs. For enhanced security, you may want to:
-- Use a dedicated HubSpot private app with minimal scopes
-- Set up API key rotation
-- Use a separate Claude API key for this extension
+**Run backend locally:**
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env  # Configure credentials
+python server.py
+```
+
+**Test extension:**
+- Load unpacked in Chrome
+- Backend URL defaults to `localhost:5001`

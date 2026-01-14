@@ -18,7 +18,21 @@ const BACKEND_URL = 'http://localhost:5001';
 const BACKEND_URL = 'https://your-deployed-backend-url.hqo.co';
 ```
 
-### 2. Configure API Keys
+### 2. Update Manifest Host Permissions
+
+Add the backend URL to `manifest.json` so the extension can make API calls:
+
+**File:** `manifest.json`
+
+```json
+"host_permissions": [
+  "https://api.hubapi.com/*",
+  "https://api.anthropic.com/*",
+  "https://your-deployed-backend-url.hqo.co/*"
+]
+```
+
+### 3. Configure API Keys
 
 Users need to configure their API keys via the extension's options page:
 
