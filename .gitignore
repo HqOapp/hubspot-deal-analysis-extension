@@ -1,0 +1,35 @@
+# Environment files with secrets
+.env
+backend/.env
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node (if any)
+node_modules/
+
+# Build artifacts
+*.zip
+extension.zip
+
+# Logs
+*.log

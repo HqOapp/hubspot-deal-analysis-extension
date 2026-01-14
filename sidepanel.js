@@ -33,10 +33,11 @@ let lookupResults = []; // Results from analysis lookup
 // Backend URL for Snowflake operations (set to your deployed backend URL)
 const BACKEND_URL = 'http://localhost:5001';
 
-// Hardcoded API keys (for personal use only)
+// API keys - loaded from Chrome storage (set via extension options page)
+// These placeholders are used when keys aren't configured
 const HARDCODED_SETTINGS = {
-  hubspotToken: "pat-na2-6b8ee488-a12b-4205-addb-e37b95dfa9ed",
-  claudeApiKey: "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"
+  hubspotToken: "",
+  claudeApiKey: ""
 };
 
 // Initialize

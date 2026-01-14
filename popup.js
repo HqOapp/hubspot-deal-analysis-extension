@@ -24,10 +24,11 @@ const newAnalysisBtn = document.getElementById('newAnalysisBtn');
 // State
 let currentResult = null;
 
-// Hardcoded API keys (for personal use only)
+// API keys - loaded from Chrome storage (set via extension options page)
+// These placeholders are used when keys aren't configured
 const HARDCODED_SETTINGS = {
-  hubspotToken: "pat-na2-6b8ee488-a12b-4205-addb-e37b95dfa9ed",
-  claudeApiKey: "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"
+  hubspotToken: "",
+  claudeApiKey: ""
 };
 
 // Analysis type descriptions
