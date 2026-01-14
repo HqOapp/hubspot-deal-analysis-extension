@@ -10,7 +10,8 @@
   ],
   "host_permissions": [
     "https://api.hubapi.com/*",
-    "https://api.anthropic.com/*"
+    "https://api.anthropic.com/*",
+    "https://hubspot-deal-analysis-extension-production.up.railway.app/*"
   ],
   "action": {
     "default_icon": {

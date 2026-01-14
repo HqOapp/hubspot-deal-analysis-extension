@@ -30,8 +30,8 @@ let currentModalSection = null; // Track which section the modal is for (null = 
 let overallFeedbackSubmitted = false; // Track if overall feedback has been submitted
 let lookupResults = []; // Results from analysis lookup
 
-// Backend URL for Snowflake operations (set to your deployed backend URL)
-const BACKEND_URL = 'http://localhost:5001';
+// Backend URL for Snowflake operations
+const BACKEND_URL = 'https://hubspot-deal-analysis-extension-production.up.railway.app';
 
 // API keys - loaded from Chrome storage (set via extension options page)
 // These placeholders are used when keys aren't configured
