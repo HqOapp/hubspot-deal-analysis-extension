@@ -270,9 +270,25 @@ def format_deal_for_analysis(deal: Dict, contacts: List[Dict], companies: List[D
         lines.append("")
 
     # Sort engagements by timestamp
+    def parse_timestamp_for_sort(ts):
+        """Parse timestamp for sorting. Returns 0 if unparseable."""
+        if not ts:
+            return 0
+        try:
+            if str(ts).isdigit():
+                return int(ts)
+            elif 'T' in str(ts):
+                from datetime import datetime
+                ts_clean = str(ts).replace('Z', '').split('.')[0]
+                dt = datetime.fromisoformat(ts_clean)
+                return int(dt.timestamp() * 1000)
+        except Exception:
+            pass
+        return 0
+
     sorted_engagements = sorted(
         engagements,
-        key=lambda e: int(e.get("properties", {}).get("hs_timestamp") or 0)
+        key=lambda e: parse_timestamp_for_sort(e.get("properties", {}).get("hs_timestamp"))
     )
 
     lines.append("## Activity Timeline (Chronological)")
